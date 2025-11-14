@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int         @id @default(autoincrement())
+  name       String
+  email      String      @unique
+  password   String
+  role       String      @default("user")
+  createdAt  DateTime    @default(now())
+  avatarUrl  String?
+  chatsA     Chat[]      @relation("UserAChats")
+  chatsB     Chat[]      @relation("UserBChats")
+  favourites Favourite[]
+  messages   Message[]
+  properties Property[]  @relation("OwnerProperties")
+  rentals    Rental[]    @relation("BorrowerRentals")
+}
+
+model Property {
+  id          Int         @id @default(autoincrement())
+  ownerId     Int
+  title       String
+  description String
+  imageUrl    String
+  location    String
+  price       Float
+  createdAt   DateTime    @default(now())
+  lat         Float?
+  lng         Float?
+  favourites  Favourite[]
+  owner       User        @relation("OwnerProperties", fields: [ownerId], references: [id])
+  rentals     Rental[]
+}
+
+model Favourite {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  propertyId Int
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Chat {
+  id        Int       @id @default(autoincrement())
+  userAId   Int
+  userBId   Int
+  createdAt DateTime  @default(now())
+  userA     User      @relation("UserAChats", fields: [userAId], references: [id])
+  userB     User      @relation("UserBChats", fields: [userBId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  id       Int      @id @default(autoincrement())
+  chatId   Int
+  senderId Int
+  content  String
+  sentAt   DateTime @default(now())
+  chat     Chat     @relation(fields: [chatId], references: [id])
+  sender   User     @relation(fields: [senderId], references: [id])
+}
+
+model Rental {
+  id          Int            @id @default(autoincrement())
+  propertyId  Int
+  borrowerId  Int
+  startDate   DateTime
+  nextDueDate DateTime
+  rentAmount  Float
+  isActive    Boolean        @default(true)
+  reminders   RentReminder[]
+  borrower    User           @relation("BorrowerRentals", fields: [borrowerId], references: [id])
+  property    Property       @relation(fields: [propertyId], references: [id])
+}
+
+model RentReminder {
+  id         Int       @id @default(autoincrement())
+  rentalId   Int
+  dueDate    DateTime
+  status     String
+  notifiedAt DateTime?
+  rental     Rental    @relation(fields: [rentalId], references: [id])
+}
