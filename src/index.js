@@ -26,6 +26,7 @@ const favouriteRoutes = require('./routes/favourites');
 const chatRoutes = require('./routes/chats');
 const rentalRoutes = require('./routes/rentals');
 const userRoutes = require('./routes/users');
+const reminderRoutes = require('./routes/reminders');
 
 // Root route
 app.get('/', (req, res) => {
@@ -62,6 +63,7 @@ app.use('/favourites', favouriteRoutes);
 app.use('/chats', chatRoutes);
 app.use('/rentals', rentalRoutes);
 app.use('/users', userRoutes);
+app.use('/reminders', reminderRoutes);
 
 // Start HTTP server and attach Socket.IO
 const server = http.createServer(app);

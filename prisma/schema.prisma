@@ -21,6 +21,7 @@ model User {
   messages   Message[]
   properties Property[]  @relation("OwnerProperties")
   rentals    Rental[]    @relation("BorrowerRentals")
+  customReminders CustomReminder[]
 }
 
 model Property {
@@ -77,6 +78,7 @@ model Rental {
   rentAmount  Float
   isActive    Boolean        @default(true)
   reminders   RentReminder[]
+  invites     RentalInvite[]
   borrower    User           @relation("BorrowerRentals", fields: [borrowerId], references: [id])
   property    Property       @relation(fields: [propertyId], references: [id])
 }
@@ -88,4 +90,31 @@ model RentReminder {
   status     String
   notifiedAt DateTime?
   rental     Rental    @relation(fields: [rentalId], references: [id])
+}
+
+model RentalInvite {
+  id           Int       @id @default(autoincrement())
+  rentalId     Int
+  code         String    @unique
+  inviterId    Int
+  inviteeEmail String?
+  status       String    @default("pending")
+  expiresAt    DateTime
+  acceptedBy   Int?
+
+  rental       Rental    @relation(fields: [rentalId], references: [id])
+}
+
+model CustomReminder {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  role          String
+  propertyTitle String
+  counterparty  String?
+  amount        Float?
+  dueDate       DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id])
 }

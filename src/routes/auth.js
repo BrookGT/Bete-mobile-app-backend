@@ -47,9 +47,17 @@ router.post(
     const { email, password } = req.body;
     try {
       const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+      if (!user) {
+        // specific message when account does not exist
+        return res.status(404).json({ error: 'Account not found. Please sign up.' });
+      }
+
       const ok = await bcrypt.compare(password, user.password);
-      if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+      if (!ok) {
+        // specific message for wrong password
+        return res.status(401).json({ error: 'Incorrect password. Please try again.' });
+      }
+
       const token = sign(user);
       return res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } catch (e) {
