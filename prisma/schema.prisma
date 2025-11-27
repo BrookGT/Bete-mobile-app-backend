@@ -38,6 +38,7 @@ model Property {
   favourites  Favourite[]
   owner       User        @relation("OwnerProperties", fields: [ownerId], references: [id])
   rentals     Rental[]
+  chats       Chat[]
 }
 
 model Favourite {
@@ -50,13 +51,15 @@ model Favourite {
 }
 
 model Chat {
-  id        Int       @id @default(autoincrement())
-  userAId   Int
-  userBId   Int
-  createdAt DateTime  @default(now())
-  userA     User      @relation("UserAChats", fields: [userAId], references: [id])
-  userB     User      @relation("UserBChats", fields: [userBId], references: [id])
-  messages  Message[]
+  id         Int       @id @default(autoincrement())
+  userAId    Int
+  userBId    Int
+  propertyId Int?
+  createdAt  DateTime  @default(now())
+  userA      User      @relation("UserAChats", fields: [userAId], references: [id])
+  userB      User      @relation("UserBChats", fields: [userBId], references: [id])
+  property   Property? @relation(fields: [propertyId], references: [id])
+  messages   Message[]
 }
 
 model Message {

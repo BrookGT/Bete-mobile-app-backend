@@ -6,31 +6,48 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 
 // Create (or fetch existing) chat between current user and otherUserId
+// Now also accepts optional propertyId to link chat to a specific property
 router.post(
   '/',
   auth(),
-  [body('otherUserId').isInt({ gt: 0 })],
+  [body('otherUserId').isInt({ gt: 0 }), body('propertyId').optional().isInt({ gt: 0 })],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const otherUserId = Number(req.body.otherUserId);
+    const propertyId = req.body.propertyId ? Number(req.body.propertyId) : null;
     const me = req.user.id;
     if (otherUserId === me) return res.status(400).json({ error: 'Cannot chat with yourself' });
     try {
       // Ensure ordering so we don't duplicate chats A/B vs B/A
       const [a, b] = me < otherUserId ? [me, otherUserId] : [otherUserId, me];
-      let chat = await prisma.chat.findFirst({ where: { userAId: a, userBId: b } });
+      
+      // Find existing chat - now also consider propertyId if provided
+      let chat;
+      if (propertyId) {
+        // Look for chat with same users AND same property
+        chat = await prisma.chat.findFirst({ 
+          where: { userAId: a, userBId: b, propertyId } 
+        });
+      } else {
+        // Legacy: find any chat between these users
+        chat = await prisma.chat.findFirst({ where: { userAId: a, userBId: b } });
+      }
+      
       if (!chat) {
-        chat = await prisma.chat.create({ data: { userAId: a, userBId: b } });
+        chat = await prisma.chat.create({ 
+          data: { userAId: a, userBId: b, propertyId } 
+        });
       }
       return res.status(201).json(chat);
     } catch (e) {
+      console.error('create chat error', e);
       return res.status(500).json({ error: 'Failed to create chat' });
     }
   }
 );
 
-// List chats for current user (includes other user's info)
+// List chats for current user (includes other user's info and property info)
 router.get('/', auth(), async (req, res) => {
   const me = req.user.id;
   try {
@@ -41,9 +58,10 @@ router.get('/', auth(), async (req, res) => {
         userA: { select: { id: true, name: true, avatarUrl: true } },
         userB: { select: { id: true, name: true, avatarUrl: true } },
         messages: { orderBy: { sentAt: 'desc' }, take: 1 },
+        property: { select: { id: true, title: true, imageUrl: true, price: true } },
       },
     });
-    // Map to include the "other" user info and last message preview
+    // Map to include the "other" user info, property info, and last message preview
     const result = chats.map((c) => {
       const other = c.userAId === me ? c.userB : c.userA;
       const lastMsg = c.messages?.[0];
@@ -55,6 +73,11 @@ router.get('/', auth(), async (req, res) => {
         lastMessage: lastMsg?.content || '',
         lastMessageAt: lastMsg?.sentAt || c.createdAt,
         createdAt: c.createdAt,
+        // Property info
+        propertyId: c.property?.id || null,
+        propertyTitle: c.property?.title || null,
+        propertyImage: c.property?.imageUrl || null,
+        propertyPrice: c.property?.price || null,
       };
     });
     return res.json(result);
