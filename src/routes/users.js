@@ -19,6 +19,23 @@ router.get('/me', auth(), async (req, res) => {
   }
 });
 
+// Get user by ID (public profile info only)
+router.get('/:id', auth(), async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, avatarUrl: true },
+    });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.json(user);
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
 // Update current user profile (name, avatarUrl)
 router.put(
   '/me',

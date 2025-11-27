@@ -30,16 +30,36 @@ router.post(
   }
 );
 
-// List chats for current user
+// List chats for current user (includes other user's info)
 router.get('/', auth(), async (req, res) => {
   const me = req.user.id;
   try {
     const chats = await prisma.chat.findMany({
       where: { OR: [{ userAId: me }, { userBId: me }] },
       orderBy: { createdAt: 'desc' },
+      include: {
+        userA: { select: { id: true, name: true, avatarUrl: true } },
+        userB: { select: { id: true, name: true, avatarUrl: true } },
+        messages: { orderBy: { sentAt: 'desc' }, take: 1 },
+      },
     });
-    return res.json(chats);
+    // Map to include the "other" user info and last message preview
+    const result = chats.map((c) => {
+      const other = c.userAId === me ? c.userB : c.userA;
+      const lastMsg = c.messages?.[0];
+      return {
+        id: c.id,
+        otherUserId: other?.id,
+        otherUserName: other?.name || 'User',
+        otherUserAvatar: other?.avatarUrl || null,
+        lastMessage: lastMsg?.content || '',
+        lastMessageAt: lastMsg?.sentAt || c.createdAt,
+        createdAt: c.createdAt,
+      };
+    });
+    return res.json(result);
   } catch (e) {
+    console.error('list chats error', e);
     return res.status(500).json({ error: 'Failed to list chats' });
   }
 });
