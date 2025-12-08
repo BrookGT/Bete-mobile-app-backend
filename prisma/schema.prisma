@@ -28,13 +28,18 @@ model Property {
   id          Int         @id @default(autoincrement())
   ownerId     Int
   title       String
-  description String
-  imageUrl    String
-  location    String
+  description String?
+  imageUrl    String?
+  images      String[]    @default([])
+  location    String?
   price       Float
   createdAt   DateTime    @default(now())
   lat         Float?
   lng         Float?
+  listingType String      @default("rent")
+  bedrooms    Int?
+  bathrooms   Int?
+  area        String?
   favourites  Favourite[]
   owner       User        @relation("OwnerProperties", fields: [ownerId], references: [id])
   rentals     Rental[]
